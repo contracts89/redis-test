@@ -15,13 +15,15 @@ provider "aws" {
 
 # Create a Virtual Private Cloud (VPC)
 resource "aws_vpc" "redis_vpc" {
-  cidr_block = "10.0.0.0/28"
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 }
 
 # Create a public subnet
 resource "aws_subnet" "public_subnet" {
-  vpc_id     = aws_vpc.redis_vpc.id
-  cidr_block = "10.0.1.0/24"
+  vpc_id            = aws_vpc.redis_vpc.id
+  cidr_block        = "10.0.8.0/24"
   availability_zone = "eu-west-1a"
 
   tags = {
@@ -31,8 +33,8 @@ resource "aws_subnet" "public_subnet" {
 
 # Create a private subnet
 resource "aws_subnet" "private_subnet" {
-  vpc_id     = aws_vpc.redis_vpc.id
-  cidr_block = "10.0.2.0/24"
+  vpc_id            = aws_vpc.redis_vpc.id
+  cidr_block        = "10.0.6.0/24"
   availability_zone = "eu-west-1a"
 
   tags = {
@@ -45,15 +47,15 @@ resource "aws_iam_role" "ssm_role" {
   name = "EC2_SSM_Role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole"
+        Action    = "sts:AssumeRole"
         Principal = {
           Service = "ec2.amazonaws.com"
         }
-        Effect = "Allow"
-        Sid    = ""
+        Effect    = "Allow"
+        Sid       = ""
       },
     ]
   })
@@ -100,7 +102,39 @@ resource "aws_security_group" "allow_ssm" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    # Adjust the CIDR as needed to restrict SSH access
     cidr_blocks = ["0.0.0.0/0"]  
   }
+}
+
+# Create interface VPC Endpoint for SSM
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = aws_vpc.redis_vpc.id
+  service_name        = "com.amazonaws.eu-west-1.ssm"
+  subnet_ids          = [aws_subnet.private_subnet.id]
+  security_group_ids  = [aws_security_group.allow_ssm.id]
+  vpc_endpoint_type   = "Interface"
+  
+  private_dns_enabled = true
+}
+
+# Create interface VPC Endpoint for EC2 Messages
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id              = aws_vpc.redis_vpc.id
+  service_name        = "com.amazonaws.eu-west-1.ec2messages"
+  subnet_ids          = [aws_subnet.private_subnet.id]
+  security_group_ids  = [aws_security_group.allow_ssm.id]
+  vpc_endpoint_type = "Interface"
+
+  private_dns_enabled = true
+}
+
+# Create interface VPC Endpoint for SSM Messages
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id              = aws_vpc.redis_vpc.id
+  service_name        = "com.amazonaws.eu-west-1.ssmmessages"
+  subnet_ids          = [aws_subnet.private_subnet.id]
+  security_group_ids  = [aws_security_group.allow_ssm.id]
+  vpc_endpoint_type = "Interface"
+
+  private_dns_enabled = true
 }
