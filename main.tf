@@ -64,7 +64,7 @@ resource "aws_iam_role" "ssm_role" {
 # Attach SSM policies to the role
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
   role       = aws_iam_role.ssm_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 # Create an EC2 instance in the private subnet
