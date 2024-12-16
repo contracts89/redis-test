@@ -70,11 +70,12 @@ resource "aws_iam_role_policy_attachment" "ssm_policy" {
 # Create an EC2 instance in the private subnet
 resource "aws_instance" "redis_ec2" {
   ami           = "ami-05842291b9a0bd79f"  # Change this to a valid AMI ID
-  instance_type = "t2.micro" 
+  instance_type = "t2.micro"
   subnet_id     = aws_subnet.private_subnet.id
-  
+
   iam_instance_profile = aws_iam_instance_profile.ssm_instance_profile.name
-  
+  vpc_security_group_ids = [aws_security_group.allow_ssm.id]
+
   tags = {
     Name = "redis_ec2"
   }
@@ -102,7 +103,7 @@ resource "aws_security_group" "allow_ssm" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -113,7 +114,7 @@ resource "aws_vpc_endpoint" "ssm" {
   subnet_ids          = [aws_subnet.private_subnet.id]
   security_group_ids  = [aws_security_group.allow_ssm.id]
   vpc_endpoint_type   = "Interface"
-  
+
   private_dns_enabled = true
 }
 
